@@ -1,12 +1,18 @@
 import { StyleSheet, View, Text} from 'react-native';
 
-export default function TabTwoScreen() {
+export default function ProfileScreen() {
   return (
-    <View>
-      <Text>
-        Hello World
-      </Text>
-    </View>
+      <View style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Text style={{
+          color: 'white'
+        }}>
+          Profile
+        </Text>
+      </View>
   );
 }
 
