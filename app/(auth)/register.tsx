@@ -1,37 +1,17 @@
 import {StyleSheet, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator} from 'react-native';
-import {FunctionComponent, useState} from "react";
+import {FunctionComponent, useState, useEffect} from "react";
 import {useRouter} from "expo-router";
-import { makeRedirectUri } from "expo-auth-session";
-import * as QueryParams from "expo-auth-session/build/QueryParams";
-import * as WebBrowser from "expo-web-browser";
-import * as Linking from "expo-linking";
+import * as Location from 'expo-location';
 import {supabase} from '@/supabase/supabase';
+
 
 type RegisterProps = {}
 type InputType = 'NAME' | 'SURNAME' | 'EMAIL' | 'AGE' | 'VILLAGE' | 'STATUS' | 'CELLPHONE' | 'PASSWORD'
 
-const redirectTo = makeRedirectUri();
-
-const createSessionFromUrl = async (url: string) => {
-    const { params, errorCode } = QueryParams.getQueryParams(url);
-
-    if (errorCode) throw new Error(errorCode);
-    const { access_token, refresh_token } = params;
-
-    if (!access_token) return;
-
-    const { data, error } = await supabase.auth.setSession({
-        access_token,
-        refresh_token,
-    });
-    if (error) throw error;
-    return data.session;
-};
-
-
 const Register: FunctionComponent<RegisterProps> = () => {
     const [formStep, setFormStep] = useState(1); // Changed from boolean to number for clarity
     const [isLoading, setIsLoading] = useState(false);
+    const [location, setLocation] = useState<Location.LocationObject | null>(null);
     const [formData, setFormData] = useState({
         name: '',
         surname: '',
@@ -98,10 +78,6 @@ const Register: FunctionComponent<RegisterProps> = () => {
         setFormStep(1);
     }
 
-
-    const url = Linking.useURL();
-    if (url) createSessionFromUrl(url);
-
     const submitForm = async () => {
         const validation = validateStepTwo();
         if (!validation.valid) {
@@ -115,20 +91,23 @@ const Register: FunctionComponent<RegisterProps> = () => {
                 email: formData.email,
                 password: formData.password,
                 options: {
-                    emailRedirectTo: redirectTo,
                     data: {
                         name: formData.name,
                         surname: formData.surname,
                         age: formData.age,
                         village: formData.village,
                         cellphone: formData.cellphone,
-                        status: formData.status
+                        status: formData.status,
+                        location: location
                     }
                 }
             });
 
-            if (error) throw error;
-
+            if (error) {
+                alert('Error' + error)
+                return
+            }
+            // update the push token for the user
             alert('Registration successful! Please check your email to verify your account.');
             router.navigate('/login');
         } catch (error) {
@@ -138,6 +117,22 @@ const Register: FunctionComponent<RegisterProps> = () => {
             setIsLoading(false);
         }
     }
+
+    useEffect(() => {
+        async function getCurrentLocation(): Promise<void> {
+
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                alert('Permission to access location was denied');
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({});
+            setLocation(location);
+        }
+
+        getCurrentLocation();
+    }, []);
 
     const renderFormStep = () => {
         if (formStep === 1) {
